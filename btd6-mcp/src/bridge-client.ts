@@ -7,7 +7,7 @@ import type * as z from 'zod/v4';
 import {
     progressSchema, configurationSchema, performanceSchema, mapLayoutSchema,
     canPlaceTowerResultSchema, placeTowerResultSchema, upgradeTowerResultSchema,
-    sellTowerResultSchema, setTargetPriorityResultSchema, setTowerTargetPositionResultSchema,
+    sellTowerResultSchema, buyParagonResultSchema, setTargetPriorityResultSchema, setTowerTargetPositionResultSchema,
     inspectObstaclesResultSchema, removeObstacleResultSchema, inspectTowerMicroResultSchema,
     inspectBeastMergesResultSchema, mergeBeastResultSchema,
     toggleSubmergeResultSchema, collectBankResultSchema, setAutoCollectResultSchema,
@@ -710,6 +710,10 @@ export class BridgeClient {
 
     async sellTower(options: { towerId: string }) {
         return this.request('sell_tower', options, 10_000, sellTowerResultSchema);
+    }
+
+    async buyParagon(options: { towerId?: string; paragonType?: string; additionalCashSlider?: number; useMaxSlider?: boolean }) {
+        return this.request('buy_paragon', options, 10_000, buyParagonResultSchema);
     }
 
     async inspectObstacles() {

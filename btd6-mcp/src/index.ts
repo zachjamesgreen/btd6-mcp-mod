@@ -409,6 +409,33 @@ function createServer(): McpServer {
         }
     );
 
+    server.registerTool(
+        'btd6_buy_paragon',
+        {
+            description: 'Buy a Paragon with the native "Upgrade to Paragon" call, the same one the in-game dialog uses. Give a tier 5 towerId, or a paragonType (native base tower ID such as "DartMonkey") to use any eligible tier 5 of that type. All other towers of that type are absorbed. The cash slider is additionalCashSlider (whole dollars, capped like project_paragon_degree) or useMaxSlider:true (the cap, limited by cash). Run btd6_project_paragon_degree first to choose the slider. Returns the degree, price, slider, cash spent and absorbed tower IDs. Calls the purchase once; on PARAGON_OUTCOME_UNKNOWN observe before retrying.',
+            inputSchema: z.object({
+                towerId: z.string().trim().min(1).max(128).optional().describe('ID of a placed tier 5 tower to upgrade'),
+                paragonType: z.string().trim().min(1).max(64).optional().describe('Native base tower ID, e.g. "DartMonkey" (a "-Paragon" suffix is accepted)'),
+                additionalCashSlider: z.number().finite().int().nonnegative().optional().describe('Extra cash for the paragon creation slider'),
+                useMaxSlider: z.boolean().optional().describe('Put the most cash the slider allows (cap, limited by current cash)')
+            })
+        },
+        async ({ towerId, paragonType, additionalCashSlider, useMaxSlider }) => {
+            try {
+                const result = await bridge.buyParagon({ towerId, paragonType, additionalCashSlider, useMaxSlider });
+                // The native degree settles a frame after the purchase; read it back from a separate request.
+                try {
+                    const inspection = await bridge.inspectTower({ towerId: result.towerId });
+                    const degree = (inspection.effectiveStats?.paragonBossDamage ?? inspection.modelStats?.paragonBossDamage)?.currentDegree;
+                    if (typeof degree === 'number') result.degree = degree;
+                } catch { /* keep the purchase-time degree */ }
+                return formatToolResult(result);
+            } catch (error) {
+                return formatToolError(error);
+            }
+        }
+    );
+
     server.registerTool('btd6_inspect_obstacles', {
         description: 'Inspect native paid removable obstacles in the active map: runtime IDs, positions, current prices, activity and availability. Re-read after removal or match replacement; null prices/state are unknown. Does not operate map gimmicks.',
         inputSchema: toolInput,

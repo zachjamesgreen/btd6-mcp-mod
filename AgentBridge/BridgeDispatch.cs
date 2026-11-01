@@ -85,6 +85,7 @@ public sealed partial class AgentBridgeMod
             "round_info" => HandleRoundInfo(request),
             "get_map_layout" => HandleGetMapLayout(request),
             "project_paragon_degree" => HandleProjectParagonDegree(request),
+            "buy_paragon" => HandleBuyParagon(request),
             "inspect_temple_sacrifices" => HandleInspectTempleSacrifices(request),
             "inspect_monkeyopolis_sacrifices" => HandleInspectMonkeyopolisSacrifices(request),
             _ => ErrorResult(request, "UNKNOWN_COMMAND", $"Command '{request.Kind}' is not supported by protocol v{ProtocolVersion}.", false)

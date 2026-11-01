@@ -708,6 +708,20 @@ export const sellTowerResultSchema = z.object({
     cash: z.number().finite()
 });
 
+export const buyParagonResultSchema = z.object({
+    purchased: z.boolean(),
+    paragonType: z.string(),
+    towerId: z.string(),
+    degree: z.number().int().nullable().optional(),
+    paragonPrice: z.number().finite(),
+    cashSlider: z.number().finite(),
+    maxCashSlider: z.number().finite(),
+    cashSpent: z.number().finite(),
+    cash: z.number().finite(),
+    absorbedTowerIds: z.array(z.string()),
+    tower: z.unknown().nullable().optional()
+});
+
 export const inspectObstaclesResultSchema = z.object({
     source: z.literal('active-simulation'),
     observedAtUtc: z.iso.datetime({ offset: true }),
