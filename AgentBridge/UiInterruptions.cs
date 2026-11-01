@@ -85,13 +85,14 @@ public sealed partial class AgentBridgeMod
 
     private static string? GetTutorialOrigin(Popup popup)
     {
-        // These are the installed 56.3 ShowEventPopup callback closures. Match the
-        // exact tagged completion delegate, not just the closure's type. A changed
-        // game implementation fails closed to an ordinary, explicitly handled popup.
+        // These are the installed 57.4 ShowEventPopup callback closures (56.3 numbered
+        // them 374_0/374_1). Match the exact tagged completion delegate, not just the
+        // closure's type. A changed game implementation fails closed to an ordinary,
+        // explicitly handled popup.
         var target = popup.confirmCallback?.Target;
-        var direct = target?.TryCast<InGame.__c__DisplayClass374_0>();
-        var indirect = target?.TryCast<InGame.__c__DisplayClass374_1>();
-        var completion = direct?.onEndCallback ?? indirect?.field_Public___c__DisplayClass374_0_0?.onEndCallback;
+        var direct = target?.TryCast<InGame.__c__DisplayClass379_0>();
+        var indirect = target?.TryCast<InGame.__c__DisplayClass379_1>();
+        var completion = direct?.onEndCallback ?? indirect?.field_Public___c__DisplayClass379_0_0?.onEndCallback;
         return completion != null && tutorialMarkers.TryGetValue(completion.Pointer, out var marker) ? marker.Event : null;
     }
 
