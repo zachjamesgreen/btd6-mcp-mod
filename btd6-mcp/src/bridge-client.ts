@@ -14,11 +14,11 @@ import {
     collectDropsResultSchema, setGameSpeedResultSchema, activateAbilityResultSchema,
     scheduleAbilityResultSchema, cancelScheduledAbilityResultSchema, startMatchResultSchema,
     restartMatchResultSchema, quitMatchResultSchema, ensureMainMenuResultSchema,
-    respondUiResultSchema, selectHeroResultSchema, setRoundResultSchema,
-    advanceRoundResultSchema, sandboxSpawnRoundResultSchema, sandboxClearBloonsResultSchema,
+    respondUiResultSchema, uiSnapshotResultSchema, uiClickResultSchema, selectHeroResultSchema, setRoundResultSchema,
+    advanceRoundResultSchema, sandboxSpawnRoundResultSchema, sandboxClearBloonsResultSchema, listBloonsResultSchema, sandboxSpawnBloonResultSchema,
     pauseMatchResultSchema, resumeMatchResultSchema, saveCheckpointResultSchema,
     checkpointLabelSchema, restoreCheckpointResultSchema, listCheckpointsResultSchema, deleteCheckpointResultSchema,
-    startRoundResultSchema, roundInfoResultSchema, findPlacementSpotsResultSchema,
+    startRoundResultSchema, roundInfoResultSchema, freeplayRoundInfoResultSchema, findPlacementSpotsResultSchema,
     projectedCashResultSchema, uiStateSchema, abilityTargetSchema, abilityTargetingSchema, supportCoverageSchema,
     activateAbilityInputSchema, scheduleAbilityInputSchema, type UiState, type UiAction,
     type RoundProgress, type BridgeConfiguration, type BridgePerformance, type MapLayout,
@@ -61,7 +61,7 @@ export type RoundReport = Omit<RoundInsights, 'pressureByLane' | 'topThreats'> &
 };
 export const PROTOCOL_VERSION = 1;
 const DEFAULT_TIMEOUT_MS = 5_000;
-const RESULT_POLL_INTERVAL_MS = 50;
+const RESULT_POLL_INTERVAL_MS = 10; // the mod answers within a frame (~17 ms); 50 ms polling tripled every call
 const DEFAULT_IPC_ROOT = resolve(
     dirname(fileURLToPath(import.meta.url)),
     '../..',
@@ -831,6 +831,14 @@ export class BridgeClient {
         return this.request('sandbox_spawn_round', options ?? {}, 10_000, sandboxSpawnRoundResultSchema);
     }
 
+    async listBloons(options: { limit?: number; baseId?: string; mutators?: boolean } = {}) {
+        return this.request('list_bloons', options, 10_000, listBloonsResultSchema);
+    }
+
+    async sandboxSpawnBloon(options: { bloonId: string; count?: number; spacing?: number }) {
+        return this.request('sandbox_spawn_bloon', options, 10_000, sandboxSpawnBloonResultSchema);
+    }
+
     async sandboxClearBloons() {
         return this.request('sandbox_clear_bloons', {}, 10_000, sandboxClearBloonsResultSchema);
     }
@@ -1016,6 +1024,14 @@ export class BridgeClient {
         return this.request('respond_ui', options, 10_000, respondUiResultSchema);
     }
 
+    async uiSnapshot(options: { textContains?: string; pathContains?: string; menu?: string; includeOffscreen?: boolean; limit?: number }) {
+        return this.request('ui_snapshot', options, 10_000, uiSnapshotResultSchema);
+    }
+
+    async uiClick(options: { id?: number; path?: string; text?: string; menu?: string; mode?: 'onClick' | 'pointer'; allowBehindPopup?: boolean }) {
+        return this.request('ui_click', options, 10_000, uiClickResultSchema);
+    }
+
     async pauseMatch() {
         return this.request('pause_match', {}, 10_000, pauseMatchResultSchema);
     }
@@ -1127,6 +1143,10 @@ export class BridgeClient {
         }
         if (options.checkpointId !== undefined) await this.requireCapability('checkpointTransfer');
         return this.request('delete_checkpoint', options, 10_000, deleteCheckpointResultSchema);
+    }
+
+    async getFreeplayRoundInfo(options: { round?: number; count?: number; includeActive?: boolean } = {}) {
+        return this.request('freeplay_round_info', options, 10_000, freeplayRoundInfoResultSchema);
     }
 
     async getRoundInfo(options: { round?: number } = {}): Promise<RoundInfoResult> {

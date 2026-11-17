@@ -649,6 +649,36 @@ function createServer(): McpServer {
     );
 
     server.registerTool(
+        'btd6_list_bloons',
+        {
+            description: 'Per-bloon telemetry for mechanics tests (read-only, any match): id, name/baseId, health/maxHealth, distanceTraveled, progress, path, x/y, model speed, trackSpeedMultiplier, invulnerable flag, camo/regrow/fortified/moab, leakDamage, active mutators (slows, glue, debuffs with removeAt frame), plus elapsedFrames (60/s), round, lives and cash.',
+            inputSchema: z.object({
+                limit: z.number().int().min(1).max(2000).optional().describe('Max bloons returned (default 200).'),
+                baseId: z.string().optional().describe('Only bloons whose baseId or name matches.'),
+                mutators: z.boolean().optional().describe('Include mutators (default true).')
+            })
+        },
+        async (args) => {
+            try { return formatToolResult(await bridge.listBloons(args)); } catch (error) { return formatToolError(error); }
+        }
+    );
+
+    server.registerTool(
+        'btd6_sandbox_spawn_bloon',
+        {
+            description: 'Sandbox only: spawn a specific bloon model (e.g. "Red", "PurpleRegrow", "CeramicFortified", "MoabFortified", "DdtCamo", "Bad") count times at the track start, spacing apart (game emission units).',
+            inputSchema: z.object({
+                bloonId: z.string().describe('Bloon model name.'),
+                count: z.number().int().min(1).max(500).optional().describe('How many (default 1).'),
+                spacing: z.number().min(0).optional().describe('Spacing between emissions (default 0).')
+            })
+        },
+        async (args) => {
+            try { return formatToolResult(await bridge.sandboxSpawnBloon(args)); } catch (error) { return formatToolError(error); }
+        }
+    );
+
+    server.registerTool(
         'btd6_wait_for_round_end',
         {
             description: 'Wait until the current round completes. Returns compact decision-ready state; defeat and timeout retain diagnostic telemetry. Request btd6_observe separately for complete state.',
@@ -714,6 +744,49 @@ function createServer(): McpServer {
             try {
                 const result = await bridge.respondUi({ blockerId, action, value });
                 return formatToolResult(result);
+            } catch (error) {
+                return formatToolError(error);
+            }
+        }
+    );
+
+    server.registerTool(
+        'btd6_ui_snapshot',
+        {
+            description: 'List every visible, interactable button and toggle on screen, on any menu, popup or overlay (main menu, map/difficulty/mode select, intro cards, rewards, Knowledge, settings...). Each control has an id, its visible text, its object path, the GameMenu it belongs to, whether it sits in or behind an open popup, its normalized screen position (x,y from the top-left) and a "blocked" reason for controls the bridge refuses to press (real-money store, research-profile controls). Popup controls come first, then top-to-bottom. Filter with textContains/pathContains/menu; includeOffscreen adds controls scrolled off screen. Read-only.',
+            inputSchema: z.object({
+                textContains: z.string().max(128).optional(),
+                pathContains: z.string().max(256).optional(),
+                menu: z.string().max(128).optional().describe('GameMenu type name, e.g. "MainMenu", "MapSelectScreen"'),
+                includeOffscreen: z.boolean().optional(),
+                limit: z.number().int().min(1).max(400).optional().describe('Default 150')
+            })
+        },
+        async (args) => {
+            try {
+                return formatToolResult(await bridge.uiSnapshot(args));
+            } catch (error) {
+                return formatToolError(error);
+            }
+        }
+    );
+
+    server.registerTool(
+        'btd6_ui_click',
+        {
+            description: 'Press one button or toggle through its normal UI handler (onClick, or a simulated pointer click with mode "pointer" for controls that only react to pointer events). Pick it by id from btd6_ui_snapshot (preferred), exact path, or visible text (exact match first, then contains; must be unique). Refuses controls behind an open popup unless allowBehindPopup, and never presses real-money store or research-profile controls. Returns the menu before and after and the UI state; observe again before the next click, since transitions finish over several frames. The caller is responsible for the play rules (no races, bosses, Odyssey, Contested Territory, public co-op).',
+            inputSchema: z.object({
+                id: z.number().int().optional(),
+                path: z.string().max(1024).optional(),
+                text: z.string().max(128).optional(),
+                menu: z.string().max(128).optional(),
+                mode: z.enum(['onClick', 'pointer']).optional(),
+                allowBehindPopup: z.boolean().optional()
+            })
+        },
+        async (args) => {
+            try {
+                return formatToolResult(await bridge.uiClick(args));
             } catch (error) {
                 return formatToolError(error);
             }
@@ -919,6 +992,21 @@ function createServer(): McpServer {
         try {
             const result = await bridge.getRoundInfo({ round });
             return formatToolResult(formatRoundInfoOutput(result, outputProfile));
+        } catch (error) {
+            return formatToolError(error);
+        }
+    }));
+
+    server.registerTool('btd6_freeplay_round_info', {
+        description: 'Preview the bloons of upcoming rounds, including generated freeplay rounds past the fixed list (141+). Fixed rounds come from the round set; later rounds come from the built-in freeplay generator seeded with the freeplay seed of this match (read-only). Returns each round groups (bloon, count, start/end seconds), totals and the seed.',
+        inputSchema: z.object({
+            round: z.number().int().positive().max(100000).optional().describe('First round to preview (HUD number). Defaults to the current round.'),
+            count: z.number().int().min(1).max(20).optional().describe('How many consecutive rounds (default 1).'),
+            includeActive: z.boolean().optional().describe('Also list bloons on the track now (id + handle), to check a prediction against a live round.')
+        })
+    }, retainRead('btd6_freeplay_round_info', async ({ round, count, includeActive }) => {
+        try {
+            return formatToolResult(await bridge.getFreeplayRoundInfo({ round, count, includeActive }));
         } catch (error) {
             return formatToolError(error);
         }

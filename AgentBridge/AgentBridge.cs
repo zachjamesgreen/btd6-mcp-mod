@@ -135,10 +135,22 @@ public sealed partial class AgentBridgeMod : BloonsTD6Mod
         }
         using (Measure("round_telemetry")) ProcessRoundTelemetry();
         using (Measure("simulation_timing")) UpdateSimulationTiming();
-        using (Measure("scheduled_upgrades")) ProcessScheduledUpgrades();
+        // A throw here used to skip the mailbox pump below, so the bridge stopped answering (a stale schedule from the
+        // previous match threw every frame after a restart). Drop the schedules instead.
+        using (Measure("scheduled_upgrades"))
+        {
+            try { ProcessScheduledUpgrades(); }
+            catch (Exception ex)
+            {
+                ModHelper.Warning<AgentBridgeMod>($"Scheduled upgrades failed, clearing them: {ex.Message}");
+                ResetScheduledUpgrades();
+            }
+        }
         using (Measure("scheduled_geraldo")) ProcessScheduledGeraldoPurchases();
         using (Measure("scheduled_corvus")) ProcessScheduledCorvusActions();
         using (Measure("mailbox_pump")) PumpMailbox();
+        using (Measure("plan_window")) UpdatePlanWindow();
+        using (Measure("round_preview")) UpdateRoundPreview();
         if (now >= nextStatePublishUtc)
         {
             nextStatePublishUtc = now + StatePublishInterval;
@@ -158,6 +170,8 @@ public sealed partial class AgentBridgeMod : BloonsTD6Mod
         {
             ResetAllCheckpoints();
             ResetManagedMatchState();
+            ResetPlanWindow();
+            ResetRoundPreview();
         }
         finally
         {

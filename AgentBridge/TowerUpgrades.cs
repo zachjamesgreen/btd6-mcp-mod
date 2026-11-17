@@ -395,7 +395,9 @@ public sealed partial class AgentBridgeMod
     }
     private static bool CanProcessUpgradeAutomatically(InGame inGame)
     {
-        if (isMatchPaused || TimeManager.gamePaused || UnityEngine.Time.timeScale <= 0f)
+        // A bridge pause (pause_match) still buys scheduled upgrades: the native call runs in immediate mode, so a
+        // driver can sell and rebuy with the match frozen. Other pauses (the pause menu) block, as does uiState below.
+        if (!isMatchPaused && (TimeManager.gamePaused || UnityEngine.Time.timeScale <= 0f))
             return false;
         try
         {
@@ -438,7 +440,9 @@ public sealed partial class AgentBridgeMod
     {
         if (scheduledUpgrades.Count == 0 || inGame == null || bridge == null || !inGame.IsInGame())
             return;
-        if (isMatchPaused || TimeManager.gamePaused || UnityEngine.Time.timeScale <= 0f)
+        // A bridge pause (pause_match) still buys scheduled upgrades: the native call runs in immediate mode, so a
+        // driver can sell and rebuy with the match frozen. Other pauses (the pause menu) block, as does uiState below.
+        if (!isMatchPaused && (TimeManager.gamePaused || UnityEngine.Time.timeScale <= 0f))
             return;
 
         try
@@ -773,8 +777,13 @@ public sealed partial class AgentBridgeMod
         if (!unknownOutcome)
         {
             work.Cash = inGame.GetCash();
-            if (TryFindScheduledTower(inGame, work, out var tower))
-                work.Tower = ConvertTower(tower!, gameModel);
+            // The tower can be a dead object from an ended match (its sell value throws).
+            try
+            {
+                if (TryFindScheduledTower(inGame, work, out var tower))
+                    work.Tower = ConvertTower(tower!, gameModel);
+            }
+            catch { work.Tower = null; }
         }
         else
         {

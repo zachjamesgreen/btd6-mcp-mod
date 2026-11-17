@@ -1073,6 +1073,40 @@ export const ensureMainMenuResultSchema = z.object({
     inGame: z.boolean()
 });
 
+const uiControlSchema = z.object({
+    id: z.number().int(),
+    kind: z.enum(['button', 'toggle']),
+    text: z.string().nullable().optional(),
+    path: z.string(),
+    menu: z.string().nullable().optional(),
+    inPopup: z.boolean(),
+    behindPopup: z.boolean(),
+    onScreen: z.boolean(),
+    x: z.number().finite(),
+    y: z.number().finite(),
+    isOn: z.boolean().nullable().optional(),
+    blocked: z.string().nullable().optional()
+});
+
+export const uiSnapshotResultSchema = z.object({
+    currentMenu: z.string().nullable().optional(),
+    inGame: z.boolean(),
+    popup: z.object({ type: z.string(), title: z.string().nullable().optional(), body: z.string().nullable().optional() }).nullable().optional(),
+    ui: z.unknown(),
+    screenWidth: z.number().int(),
+    screenHeight: z.number().int(),
+    total: z.number().int(),
+    returned: z.number().int(),
+    controls: z.array(uiControlSchema)
+});
+
+export const uiClickResultSchema = z.object({
+    clicked: uiControlSchema,
+    menuBefore: z.string().nullable().optional(),
+    menuAfter: z.string().nullable().optional(),
+    ui: z.unknown()
+});
+
 export const respondUiResultSchema = z.object({
     accepted: z.boolean(),
     blockerId: z.string().min(1).max(128),
@@ -1102,6 +1136,9 @@ export const sandboxSpawnRoundResultSchema = z.object({
 export const sandboxClearBloonsResultSchema = z.object({
     cleared: z.boolean()
 });
+
+export const listBloonsResultSchema = z.object({}).passthrough();
+export const sandboxSpawnBloonResultSchema = z.object({}).passthrough();
 
 export const pauseMatchResultSchema = z.object({
     paused: z.boolean(),
@@ -1599,3 +1636,16 @@ export type DamageCoverage = z.infer<typeof damageCoverageSchema>;
 export type ParagonBossDamage = z.infer<typeof paragonBossDamageSchema>;
 
 
+
+export const freeplayRoundInfoResultSchema = z.object({
+    currentRound: z.number().int(),
+    freeplaySeed: z.number().int(),
+    fixedRoundCount: z.number().int(),
+    rounds: z.array(z.object({
+        round: z.number().int(),
+        source: z.enum(['fixed', 'freeplay', 'apopalypse']),
+        totalBloons: z.number().int(),
+        durationSeconds: z.number().finite(),
+        groups: z.array(z.object({ bloon: z.string(), count: z.number().int(), start: z.number().finite(), end: z.number().finite() }))
+    }))
+}).passthrough();

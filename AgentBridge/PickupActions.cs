@@ -50,13 +50,19 @@ public sealed partial class AgentBridgeMod
 
         try
         {
-            tower.CollectFromBank(0);
+            // The input id must be the local player's: a hard-coded 0 reported the balance but never withdrew it.
+            double cashBefore = inGame.GetCash();
+            tower.CollectFromBank(inGame.bridge.GetInputId());
+            float bankAfter = 0f;
+            try { bankAfter = tower.GetBankAmount(); } catch { }
             return SuccessResult(request, new
             {
                 Collected = true,
                 TowerId = towerId,
                 AmountCollected = (float)Math.Round(bankCash, 1),
-                Cash = (float)Math.Round(inGame.GetCash(), 1)
+                CashBefore = (float)Math.Round(cashBefore, 1),
+                Cash = (float)Math.Round(inGame.GetCash(), 1),
+                BankAfter = (float)Math.Round(bankAfter, 1)
             });
         }
         catch (Exception ex)

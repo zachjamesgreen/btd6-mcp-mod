@@ -208,7 +208,7 @@ public sealed partial class AgentBridgeMod
                 }
             }
             catch (Exception ex) { mailboxError = ex.Message; }
-            mailboxStop.Token.WaitHandle.WaitOne(25);
+            mailboxStop.Token.WaitHandle.WaitOne(5); // 25 ms added up to ~60 ms per bridge call
         }
     }
 
